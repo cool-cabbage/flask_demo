@@ -53,7 +53,7 @@ def get_user(name):
     }
     return jsonify(user)
 
-@app.route("/books")
+@app.route("/books")#查询所有书
 def get_all_books():
     conn = get_db()
 
@@ -63,7 +63,7 @@ def get_all_books():
     return jsonify([dict(row) for row in rows])
 
 
-@app.route("/books/<int:num>")
+@app.route("/books/<int:num>")#查询指定id的书
 def get_book(num):
     conn = get_db()
 
@@ -75,7 +75,7 @@ def get_book(num):
     
     return jsonify(dict(row))
 
-@app.route("/books", methods=["POST"])
+@app.route("/books", methods=["POST"])#用POST提供新书名字和作者
 def add_book():
     data = request.get_json()  # 拿到用户发来的JSON数据，转成字典
 
@@ -92,6 +92,38 @@ def add_book():
 
     return jsonify({"id" : new_id, "title" : data["title"], "author" : data["author"]}), 201  # 201表示"创建成功",且不能只返回状态码
 
+
+@app.route("/books/<int:book_id>", methods=["PUT"])
+def update_book(book_id):
+    data = request.get_json()
+
+    if not data.get("title") or not data.get("author"):
+        return jsonify({"error": "书名和作者不能为空"}), 400
+    
+    conn = get_db()
+    cursor = conn.execute("UPDATE books SET title = ?, author = ? WHERE id = ?", (data["title"], data["author"], book_id))
+    conn.commit()
+    exist = cursor.rowcount
+    conn.close()
+
+    if not exist:
+        return jsonify({"error": "书不存在"}), 404
+
+    return jsonify({"title": data["title"], "author": data["author"], "id": book_id}), 200
+
+
+@app.route("/books/<int:book_id>", methods=["DELETE"])
+def delete_book(book_id):
+    conn = get_db()
+    cursor = conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
+    conn.commit()
+    exist = cursor.rowcount
+    conn.close()
+
+    if not exist:
+        return jsonify({"error": "书不存在"}), 404
+
+    return jsonify({"message": "删除成功"}), 200
 
 
 if __name__ == "__main__":
